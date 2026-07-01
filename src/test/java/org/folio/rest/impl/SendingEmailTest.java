@@ -575,6 +575,55 @@ public class SendingEmailTest extends AbstractAPITest {
   }
 
   @Test
+  public void sendEmailWithMultipleToRecipients() throws Exception {
+    initModConfigStub(mockServerPort, getWiserMockConfigurations());
+    String sender = format(ADDRESS_TEMPLATE, RandomStringUtils.insecure().nextAlphabetic(7));
+    String firstRecipient = format(ADDRESS_TEMPLATE, RandomStringUtils.insecure().nextAlphabetic(5));
+    String secondRecipient = format(ADDRESS_TEMPLATE, RandomStringUtils.insecure().nextAlphabetic(6));
+
+    EmailEntity emailEntity = new EmailEntity()
+      .withNotificationId("1")
+      .withTo(firstRecipient + ", " + secondRecipient)
+      .withFrom(sender)
+      .withHeader("Reset password")
+      .withBody("Test body")
+      .withOutputFormat(MediaType.TEXT_PLAIN);
+
+    sendEmail(emailEntity).then().statusCode(HttpStatus.SC_OK);
+
+    List<String> envelopeReceivers = getEnvelopeReceiversOnWiserServer();
+    assertTrue("envelope must contain first TO recipient " + firstRecipient,
+      envelopeReceivers.contains(firstRecipient));
+    assertTrue("envelope must contain second TO recipient " + secondRecipient,
+      envelopeReceivers.contains(secondRecipient));
+  }
+
+  @Test
+  public void sendEmailWithToResolvesAddressFromIdentity() {
+    String toIdentityAddress = "library-to@folio.org";
+    String toIdentityName = "Library To";
+    post(REST_PATH_MAIL_SETTINGS, buildWiserEmailSettingsWithIdentities(List.of(
+      new JsonObject().put("address", toIdentityAddress).put("name", toIdentityName)))
+      .encodePrettily());
+
+    String sender = format(ADDRESS_TEMPLATE, RandomStringUtils.insecure().nextAlphabetic(7));
+
+    EmailEntity emailEntity = new EmailEntity()
+      .withNotificationId("1")
+      .withTo(toIdentityAddress)
+      .withFrom(sender)
+      .withHeader("Reset password")
+      .withBody("Test body")
+      .withOutputFormat(MediaType.TEXT_PLAIN);
+
+    sendEmail(emailEntity).then().statusCode(HttpStatus.SC_OK);
+
+    List<String> envelopeReceivers = getEnvelopeReceiversOnWiserServer();
+    assertTrue("envelope must contain TO identity address " + toIdentityAddress,
+      envelopeReceivers.contains(toIdentityAddress));
+  }
+
+  @Test
   public void sendEmailWithBccResolvesAddressFromIdentity() {
     String bccIdentityAddress = "library-bcc@folio.org";
     String bccIdentityName = "Library BCC";

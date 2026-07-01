@@ -82,12 +82,12 @@ public class MailServiceImpl implements MailService {
 
     MailMessage mailMessage = new MailMessage()
       .setFrom(resolveFrom(emailEntity.getFrom(), smtpConfiguration))
-      .setTo(getMessageConfig(emailEntity.getTo()))
+      .setTo(resolveRecipients(emailEntity.getTo(), smtpConfiguration))
       .setSubject(getMessageConfig(emailEntity.getHeader()))
       .setAttachment(getMailAttachments(emailEntity.getAttachments()));
 
-    String bcc = resolveBcc(emailEntity.getBcc(), smtpConfiguration);
-    if (StringUtils.isNotBlank(bcc)) {
+    List<String> bcc = resolveRecipients(emailEntity.getBcc(), smtpConfiguration);
+    if (!bcc.isEmpty()) {
       mailMessage.setBcc(bcc);
     }
 
@@ -149,20 +149,22 @@ public class MailServiceImpl implements MailService {
     return resolveAddress(emailFrom, identities);
   }
 
-  static String resolveBcc(String emailBcc, SmtpConfiguration smtpConfiguration) {
-    String defaultBcc = getMessageConfig(emailBcc);
-    List<Identity> identities = smtpConfiguration.getIdentities();
-    if (StringUtils.isBlank(emailBcc) || identities == null || identities.isEmpty()) {
-      return defaultBcc;
+  static List<String> resolveRecipients(String rawAddresses, SmtpConfiguration smtpConfiguration) {
+    if (StringUtils.isBlank(rawAddresses)) {
+      return List.of();
     }
-    return Arrays.stream(emailBcc.split(","))
+    List<Identity> identities = smtpConfiguration.getIdentities();
+    return Arrays.stream(rawAddresses.split(","))
       .map(String::trim)
       .filter(StringUtils::isNotBlank)
       .map(address -> resolveAddress(address, identities))
-      .collect(Collectors.joining(", "));
+      .collect(Collectors.toList());
   }
 
   private static String resolveAddress(String address, List<Identity> identities) {
+    if (identities == null || identities.isEmpty()) {
+      return address;
+    }
     return identities.stream()
       .filter(identity -> address.equals(identity.getAddress()))
       .findFirst()

@@ -110,7 +110,7 @@ SMTP configuration (`GET /email/settings/{id}`) example:
 > the From header is rendered as `"<name>" <address>` (e.g. `"FOLIO Notifications" <noreply@folio.org>`).
 > If no identity matches, the request's `from` value is used as-is; if the request omits `from`, the
 > configuration's top-level `from` is used. The same identity resolution applies to each address in
-> `EmailEntity.bcc`.
+> `EmailEntity.to` and `EmailEntity.bcc`, both of which accept multiple comma-separated addresses.
 
 ### Configuration using `mod-email`'s API (Deprecated)
 

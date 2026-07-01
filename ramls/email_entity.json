@@ -17,7 +17,7 @@
       "type": "string"
     },
     "to": {
-      "description":"address of the recipient",
+      "description":"address(es) of the recipient; comma-separated for multiple",
       "type": "string"
     },
     "bcc": {
