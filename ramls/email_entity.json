@@ -21,8 +21,13 @@
       "type": "string"
     },
     "bcc": {
-      "description":"blind carbon copy address(es); comma-separated for multiple",
-      "type": "string"
+      "description": "Blind carbon copy recipients",
+      "type": "array",
+      "items": {
+        "description": "Blind carbon copy recipient",
+        "type": "string",
+        "format": "email"
+      }
     },
     "header": {
       "description":"subject of email",

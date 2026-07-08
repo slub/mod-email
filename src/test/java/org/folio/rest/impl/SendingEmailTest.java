@@ -550,7 +550,7 @@ public class SendingEmailTest extends AbstractAPITest {
       .withNotificationId("1")
       .withTo(recipient)
       .withFrom(sender)
-      .withBcc(bcc)
+      .withBcc(List.of(bcc))
       .withHeader("Reset password")
       .withBody("Test body")
       .withOutputFormat(MediaType.TEXT_PLAIN);
@@ -589,7 +589,7 @@ public class SendingEmailTest extends AbstractAPITest {
       .withNotificationId("1")
       .withTo(recipient)
       .withFrom(sender)
-      .withBcc(bccIdentityAddress)
+      .withBcc(List.of(bccIdentityAddress))
       .withHeader("Reset password")
       .withBody("Test body")
       .withOutputFormat(MediaType.TEXT_PLAIN);
