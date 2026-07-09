@@ -159,7 +159,7 @@ public class MailServiceImpl implements MailService {
       .map(address -> identities == null || identities.isEmpty()
         ? address
         : resolveAddress(address, identities))
-      .collect(Collectors.toList());
+      .toList();
   }
 
   private static String resolveAddress(String address, List<Identity> identities) {
