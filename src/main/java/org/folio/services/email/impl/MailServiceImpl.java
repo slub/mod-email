@@ -8,7 +8,6 @@ import static org.apache.commons.lang3.StringUtils.isNoneBlank;
 import static org.folio.rest.impl.base.AbstractEmail.RETRY_MAX_ATTEMPTS;
 import static org.folio.util.EmailUtils.getMessageConfig;
 
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -86,8 +85,8 @@ public class MailServiceImpl implements MailService {
       .setSubject(getMessageConfig(emailEntity.getHeader()))
       .setAttachment(getMailAttachments(emailEntity.getAttachments()));
 
-    String bcc = resolveBcc(emailEntity.getBcc(), smtpConfiguration);
-    if (StringUtils.isNotBlank(bcc)) {
+    List<String> bcc = resolveBcc(emailEntity.getBcc(), smtpConfiguration);
+    if (!bcc.isEmpty()) {
       mailMessage.setBcc(bcc);
     }
 
@@ -149,17 +148,18 @@ public class MailServiceImpl implements MailService {
     return resolveAddress(emailFrom, identities);
   }
 
-  static String resolveBcc(String emailBcc, SmtpConfiguration smtpConfiguration) {
-    String defaultBcc = getMessageConfig(emailBcc);
-    List<Identity> identities = smtpConfiguration.getIdentities();
-    if (StringUtils.isBlank(emailBcc) || identities == null || identities.isEmpty()) {
-      return defaultBcc;
+  static List<String> resolveBcc(List<String> emailBcc, SmtpConfiguration smtpConfiguration) {
+    if (emailBcc == null || emailBcc.isEmpty()) {
+      return List.of();
     }
-    return Arrays.stream(emailBcc.split(","))
-      .map(String::trim)
+    List<Identity> identities = smtpConfiguration.getIdentities();
+    return emailBcc.stream()
+      .map(StringUtils::trimToEmpty)
       .filter(StringUtils::isNotBlank)
-      .map(address -> resolveAddress(address, identities))
-      .collect(Collectors.joining(", "));
+      .map(address -> identities == null || identities.isEmpty()
+        ? address
+        : resolveAddress(address, identities))
+      .toList();
   }
 
   private static String resolveAddress(String address, List<Identity> identities) {
