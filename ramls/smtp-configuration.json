@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "description": "Configuration of the SMTP server. Properties marked with \"x-sensitive\": true (server connection settings and credentials) are omitted from collection GET responses and kept on PUT when absent",
+  "description": "Configuration of the SMTP server. Properties marked with \"x-sensitive\": true (server connection settings and credentials) are omitted from collection GET responses",
   "title": "SMTP configuration schema",
   "type": "object",
   "properties": {

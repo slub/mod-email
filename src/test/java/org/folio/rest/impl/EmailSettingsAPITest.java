@@ -242,53 +242,6 @@ public class EmailSettingsAPITest extends AbstractAPITest {
   }
 
   @Test
-  public void putById_positive_missingSensitiveFieldsKeepStoredValues() {
-    var emailSetting = buildValidEmailSettings();
-    emailSetting.getJsonObject("value").put("expirationHours", 24);
-    post(REST_PATH_MAIL_SETTINGS, emailSetting.encodePrettily())
-      .then()
-      .statusCode(SC_CREATED);
-
-    // a client that edits the collection GET result sends no sensitive fields
-    var settingToPut = withoutSensitiveFields(emailSetting.copy());
-    settingToPut.getJsonObject("value").put("from", "updated@folio.org");
-    put(emailSettingByIdPath(CONFIG_ID), settingToPut.encodePrettily())
-      .then()
-      .statusCode(SC_NO_CONTENT);
-
-    var expectedSetting = emailSetting.copy();
-    expectedSetting.put("_version", 2);
-    expectedSetting.getJsonObject("value").put("from", "updated@folio.org");
-    get(emailSettingByIdPath(CONFIG_ID))
-      .then()
-      .statusCode(SC_OK)
-      .body(matchesJson(expectedSetting, ignoredProperties()));
-  }
-
-  @Test
-  public void putById_positive_newSensitiveValuesReplaceStoredOnes() {
-    var emailSetting = buildValidEmailSettings();
-    post(REST_PATH_MAIL_SETTINGS, emailSetting.encodePrettily())
-      .then()
-      .statusCode(SC_CREATED);
-
-    var settingToPut = emailSetting.copy();
-    settingToPut.getJsonObject("value")
-      .put("password", "new-password")
-      .put("host", "smtp.example.org")
-      .put("port", 587)
-      .put("ssl", false);
-    put(emailSettingByIdPath(CONFIG_ID), settingToPut.encodePrettily())
-      .then()
-      .statusCode(SC_NO_CONTENT);
-
-    get(emailSettingByIdPath(CONFIG_ID))
-      .then()
-      .statusCode(SC_OK)
-      .body(matchesJson(settingToPut.copy().put("_version", 2), ignoredProperties()));
-  }
-
-  @Test
   public void getById_negative_entityNotFound() {
     get(emailSettingByIdPath(UUID.randomUUID().toString()))
       .then()
@@ -359,18 +312,15 @@ public class EmailSettingsAPITest extends AbstractAPITest {
       .extract().response();
 
     var postResponseId = new JsonObject(postResponse.body().asString()).getString("id");
-    // a missing sensitive field (e.g. host) is taken from the stored value, so use another violation
-    var identity = new JsonObject().put("address", "noreply@folio.org");
-    var newValue = emailSetting.getJsonObject("value").copy()
-      .put("identities", new JsonArray().add(identity).add(identity.copy()));
+    var newValue = emailSetting.getJsonObject("value").copy();
+    newValue.remove("host");
     var emailSettingToPut = emailSetting.copy().put("value", newValue);
 
     var expectedError = new JsonObject()
       .put("message", "Invalid value in setting")
       .put("code", "validation_error")
       .put("parameters", new JsonArray()
-        .add(new JsonObject().put("key", "value.identities")
-          .put("value", "duplicate address: noreply@folio.org")));
+        .add(new JsonObject().put("key", "value.host").put("value", "must not be null")));
     var expectedErrors = new JsonObject().put("errors", new JsonArray(List.of(expectedError)));
 
     put(emailSettingByIdPath(postResponseId), emailSettingToPut.encodePrettily())

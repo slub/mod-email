@@ -157,7 +157,6 @@ public abstract class AbstractMailSettings {
       throw new EmailSettingsException(getEntityNotFoundErrorEntity(id), NOT_FOUND);
     }
 
-    keepStoredSensitiveFields(prevValue, newValue);
     MAIL_SETTINGS_VERIFIERS.get(newValue.getKey()).accept(newValue.getValue());
     removeIdFromValueIfPresent(newValue);
     return conn.update(SETTINGS_TABLE, newValue, id).map(updatedRs -> respond204());
@@ -168,26 +167,6 @@ public abstract class AbstractMailSettings {
       collection.getSettings().forEach(setting -> SensitiveFields.strip(setting.getKey(), setting.getValue()));
     }
     return response;
-  }
-
-  /**
-   * Copies sensitive fields that the new value doesn't contain from the stored value, so that a client
-   * which loaded the setting via the collection GET (without them) and PUTs it back doesn't wipe them.
-   */
-  @SuppressWarnings("unchecked")
-  private static void keepStoredSensitiveFields(JsonObject prevValue, Setting newValue) {
-    if (!(newValue.getValue() instanceof Map<?, ?> rawNewSettingValue)
-      || !newValue.getKey().equals(prevValue.getString("key"))
-      || !(prevValue.getValue("value") instanceof JsonObject storedSettingValue)) {
-      return;
-    }
-
-    var newSettingValue = (Map<String, Object>) rawNewSettingValue;
-    for (String field : SensitiveFields.forKey(newValue.getKey())) {
-      if (newSettingValue.get(field) == null && storedSettingValue.getValue(field) != null) {
-        newSettingValue.put(field, storedSettingValue.getValue(field));
-      }
-    }
   }
 
   private Error getInvalidKeyErrorEntity() {
