@@ -25,6 +25,8 @@ import org.junit.Test;
 public class EmailSettingsAPITest extends AbstractAPITest {
 
   private static final String CONFIG_ID = UUID.randomUUID().toString();
+  private static final List<String> SENSITIVE_FIELDS = List.of("host", "port", "username",
+    "password", "ssl", "trustAll", "loginOption", "startTlsOptions", "expirationHours", "authMethods");
 
   @Test
   public void postEmailSettings_positive() {
@@ -163,7 +165,7 @@ public class EmailSettingsAPITest extends AbstractAPITest {
       .body(matchesJson(emailSetting, ignoredProperties()))
       .extract().body().asString();
 
-    var postResponseJson = withoutPassword(new JsonObject(createdSettingJsonString));
+    var postResponseJson = withoutSensitiveFields(new JsonObject(createdSettingJsonString));
     var emailSettings = new JsonObject()
       .put("settings", List.of(postResponseJson))
       .put("totalRecords", 1);
@@ -204,7 +206,7 @@ public class EmailSettingsAPITest extends AbstractAPITest {
       .extract().body().asString();
 
     var settingsCollection = new JsonObject()
-      .put("settings", List.of(withoutPassword(new JsonObject(createdSettingJsonString))))
+      .put("settings", List.of(withoutSensitiveFields(new JsonObject(createdSettingJsonString))))
       .put("totalRecords", 1);
 
     get(REST_PATH_MAIL_SETTINGS + "?query=scope==mod-email")
@@ -221,55 +223,61 @@ public class EmailSettingsAPITest extends AbstractAPITest {
   }
 
   @Test
-  public void getEmailSettings_positive_passwordIsOmitted() {
+  public void getEmailSettings_positive_sensitiveFieldsAreOmitted() {
     var emailSetting = buildValidEmailSettings();
+    emailSetting.getJsonObject("value").put("expirationHours", 24);
     post(REST_PATH_MAIL_SETTINGS, emailSetting.encodePrettily())
       .then()
       .statusCode(SC_CREATED);
 
     var value = getSettingValueFromCollection();
-    assertThat(value.containsKey("password"), is(false));
-    var expectedValue = emailSetting.getJsonObject("value").copy();
-    expectedValue.remove("password");
+    SENSITIVE_FIELDS.forEach(field -> assertThat(field, value.containsKey(field), is(false)));
+    var expectedValue = withoutSensitiveFields(emailSetting.copy()).getJsonObject("value");
     assertThat(value.encode(), matchesJson(expectedValue));
 
     get(emailSettingByIdPath(CONFIG_ID))
       .then()
       .statusCode(SC_OK)
-      .body("value.password", is(emailSetting.getJsonObject("value").getString("password")));
+      .body(matchesJson(emailSetting, ignoredProperties()));
   }
 
   @Test
-  public void putById_positive_missingPasswordKeepsStoredOne() {
+  public void putById_positive_missingSensitiveFieldsKeepStoredValues() {
     var emailSetting = buildValidEmailSettings();
-    var storedPassword = emailSetting.getJsonObject("value").getString("password");
+    emailSetting.getJsonObject("value").put("expirationHours", 24);
     post(REST_PATH_MAIL_SETTINGS, emailSetting.encodePrettily())
       .then()
       .statusCode(SC_CREATED);
 
-    // a client that edits the collection GET result sends no password
-    var settingToPut = withoutPassword(emailSetting.copy());
+    // a client that edits the collection GET result sends no sensitive fields
+    var settingToPut = withoutSensitiveFields(emailSetting.copy());
     settingToPut.getJsonObject("value").put("from", "updated@folio.org");
     put(emailSettingByIdPath(CONFIG_ID), settingToPut.encodePrettily())
       .then()
       .statusCode(SC_NO_CONTENT);
 
+    var expectedSetting = emailSetting.copy();
+    expectedSetting.put("_version", 2);
+    expectedSetting.getJsonObject("value").put("from", "updated@folio.org");
     get(emailSettingByIdPath(CONFIG_ID))
       .then()
       .statusCode(SC_OK)
-      .body("value.password", is(storedPassword))
-      .body("value.from", is("updated@folio.org"));
+      .body(matchesJson(expectedSetting, ignoredProperties()));
   }
 
   @Test
-  public void putById_positive_newPasswordReplacesStoredOne() {
+  public void putById_positive_newSensitiveValuesReplaceStoredOnes() {
     var emailSetting = buildValidEmailSettings();
     post(REST_PATH_MAIL_SETTINGS, emailSetting.encodePrettily())
       .then()
       .statusCode(SC_CREATED);
 
     var settingToPut = emailSetting.copy();
-    settingToPut.getJsonObject("value").put("password", "new-password");
+    settingToPut.getJsonObject("value")
+      .put("password", "new-password")
+      .put("host", "smtp.example.org")
+      .put("port", 587)
+      .put("ssl", false);
     put(emailSettingByIdPath(CONFIG_ID), settingToPut.encodePrettily())
       .then()
       .statusCode(SC_NO_CONTENT);
@@ -277,7 +285,7 @@ public class EmailSettingsAPITest extends AbstractAPITest {
     get(emailSettingByIdPath(CONFIG_ID))
       .then()
       .statusCode(SC_OK)
-      .body("value.password", is("new-password"));
+      .body(matchesJson(settingToPut.copy().put("_version", 2), ignoredProperties()));
   }
 
   @Test
@@ -351,15 +359,18 @@ public class EmailSettingsAPITest extends AbstractAPITest {
       .extract().response();
 
     var postResponseId = new JsonObject(postResponse.body().asString()).getString("id");
-    var newValue = emailSetting.getJsonObject("value").copy();
-    newValue.remove("host");
+    // a missing sensitive field (e.g. host) is taken from the stored value, so use another violation
+    var identity = new JsonObject().put("address", "noreply@folio.org");
+    var newValue = emailSetting.getJsonObject("value").copy()
+      .put("identities", new JsonArray().add(identity).add(identity.copy()));
     var emailSettingToPut = emailSetting.copy().put("value", newValue);
 
     var expectedError = new JsonObject()
       .put("message", "Invalid value in setting")
       .put("code", "validation_error")
       .put("parameters", new JsonArray()
-        .add(new JsonObject().put("key", "value.host").put("value", "must not be null")));
+        .add(new JsonObject().put("key", "value.identities")
+          .put("value", "duplicate address: noreply@folio.org")));
     var expectedErrors = new JsonObject().put("errors", new JsonArray(List.of(expectedError)));
 
     put(emailSettingByIdPath(postResponseId), emailSettingToPut.encodePrettily())
@@ -441,8 +452,9 @@ public class EmailSettingsAPITest extends AbstractAPITest {
     return new JsonObject(body).getJsonArray("settings").getJsonObject(0).getJsonObject("value");
   }
 
-  private static JsonObject withoutPassword(JsonObject setting) {
-    setting.getJsonObject("value").remove("password");
+  private static JsonObject withoutSensitiveFields(JsonObject setting) {
+    var value = setting.getJsonObject("value");
+    SENSITIVE_FIELDS.forEach(value::remove);
     return setting;
   }
 

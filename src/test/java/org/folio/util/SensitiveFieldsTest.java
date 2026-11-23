@@ -12,8 +12,10 @@ import org.junit.Test;
 public class SensitiveFieldsTest {
 
   @Test
-  public void smtpConfigurationHasPasswordAsSensitiveField() {
-    assertEquals(Set.of("password"), SensitiveFields.forKey(SMTP_CONFIG_KEY));
+  public void smtpConfigurationHasConnectionSettingsAndCredentialsAsSensitiveFields() {
+    assertEquals(Set.of("host", "port", "username", "password", "ssl", "trustAll", "loginOption",
+        "startTlsOptions", "expirationHours", "authMethods"),
+      SensitiveFields.forKey(SMTP_CONFIG_KEY));
   }
 
   @Test
@@ -24,9 +26,10 @@ public class SensitiveFieldsTest {
 
   @Test
   public void stripRemovesSensitiveFieldsOnly() {
-    Map<String, Object> value = new HashMap<>(Map.of("host", "localhost", "password", "secret"));
+    Map<String, Object> value = new HashMap<>(Map.of("host", "localhost", "port", 25,
+      "ssl", false, "password", "secret", "from", "noreply@folio.org"));
     SensitiveFields.strip(SMTP_CONFIG_KEY, value);
-    assertEquals(Map.of("host", "localhost"), value);
+    assertEquals(Map.of("from", "noreply@folio.org"), value);
   }
 
   @Test

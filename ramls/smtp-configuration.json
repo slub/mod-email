@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "description": "Configuration of the SMTP server",
+  "description": "Configuration of the SMTP server. Properties marked with \"x-sensitive\": true (server connection settings and credentials) are omitted from collection GET responses and kept on PUT when absent",
   "title": "SMTP configuration schema",
   "type": "object",
   "properties": {
@@ -10,32 +10,38 @@
     },
     "host": {
       "description": "SMTP server host",
-      "type": "string"
+      "type": "string",
+      "x-sensitive": true
     },
     "port": {
       "description": "SMTP server port",
-      "type": "integer"
+      "type": "integer",
+      "x-sensitive": true
     },
     "username": {
       "description": "Username (credentials to access the SMTP server)",
-      "type": "string"
+      "type": "string",
+      "x-sensitive": true
     },
     "password": {
-      "description": "Password (credentials to access the SMTP server). Sensitive: omitted from collection GET responses, kept on PUT when absent",
+      "description": "Password (credentials to access the SMTP server)",
       "type": "string",
       "x-sensitive": true
     },
     "ssl": {
       "description": "Connect to SMTP server using SSL",
-      "type": "boolean"
+      "type": "boolean",
+      "x-sensitive": true
     },
     "trustAll": {
       "description": "Trust all certificates when establishing an SSL connection",
-      "type": "boolean"
+      "type": "boolean",
+      "x-sensitive": true
     },
     "loginOption": {
       "description": "Login mode",
       "type": "string",
+      "x-sensitive": true,
       "enum": [
         "DISABLED",
         "NONE",
@@ -46,6 +52,7 @@
     "startTlsOptions": {
       "description": "Start TLS options",
       "type": "string",
+      "x-sensitive": true,
       "enum": [
         "DISABLED",
         "OPTIONAL",
@@ -54,11 +61,13 @@
     },
     "expirationHours": {
       "description": "Email gets deleted after this time from DB",
-      "type": "integer"
+      "type": "integer",
+      "x-sensitive": true
     },
     "authMethods": {
       "description": "Authentication methods",
-      "type": "string"
+      "type": "string",
+      "x-sensitive": true
     },
     "from": {
       "description": "Default sender address used when the email request has no 'from' field. Not matched against identities.",

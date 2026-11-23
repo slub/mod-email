@@ -229,7 +229,7 @@
     {
       "permissionName" : "email.settings.collection.get",
       "displayName" : "mod-email - retrieve settings by cql",
-      "description" : "Get a collection of settings; secret values such as the SMTP password are not included"
+      "description" : "Get a collection of settings; sensitive values such as the SMTP server connection settings and credentials are not included"
     },
     {
       "permissionName" : "email.settings.item.get",
