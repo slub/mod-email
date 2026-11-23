@@ -8,7 +8,7 @@
 * Add `identities` (sender address + optional display name) to the SMTP configuration; a matching `from` address is rendered as `"Name" <addr>` ([MODEMAIL-127](https://folio-org.atlassian.net/browse/MODEMAIL-127))
 * Add optional `bcc` field to `POST /email`, resolved against SMTP `identities` like `from` ([MODEMAIL-129](https://folio-org.atlassian.net/browse/MODEMAIL-129))
 * Change `bcc` field to an array of email addresses ([MODEMAIL-131](https://folio-org.atlassian.net/browse/MODEMAIL-131))
-* Omit the SMTP server connection settings and credentials (`host`, `port`, `username`, `password`, `ssl`, `trustAll`, `loginOption`, `startTlsOptions`, `expirationHours`, `authMethods`; marked `"x-sensitive": true` in the schema) from `GET /email/settings` and `GET /smtp-configuration`; the item GETs still return them ([MODEMAIL-135](https://folio-org.atlassian.net/browse/MODEMAIL-135))
+* Omit SMTP connection settings and credentials from `GET /email/settings` and `GET /smtp-configuration` ([MODEMAIL-135](https://folio-org.atlassian.net/browse/MODEMAIL-135))
 
 ## v1.20.0 2026-04-16
 
