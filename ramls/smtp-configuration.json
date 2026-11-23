@@ -21,8 +21,9 @@
       "type": "string"
     },
     "password": {
-      "description": "Password (credentials to access the SMTP server)",
-      "type": "string"
+      "description": "Password (credentials to access the SMTP server). Sensitive: omitted from collection GET responses, kept on PUT when absent",
+      "type": "string",
+      "x-sensitive": true
     },
     "ssl": {
       "description": "Connect to SMTP server using SSL",

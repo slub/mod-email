@@ -1,5 +1,6 @@
 package org.folio.rest.impl;
 
+import static org.folio.services.MailSettingsService.SMTP_CONFIG_KEY;
 import static org.folio.util.LogUtil.headersAsString;
 
 import java.util.Map;
@@ -11,10 +12,12 @@ import org.apache.logging.log4j.Logger;
 import org.folio.rest.jaxrs.model.SmtpConfiguration;
 import org.folio.rest.jaxrs.model.SmtpConfigurations;
 import org.folio.rest.persist.PgUtil;
+import org.folio.util.SensitiveFields;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
 import io.vertx.core.Handler;
+import io.vertx.core.json.JsonObject;
 
 public class SmtpConfigurationApi implements org.folio.rest.jaxrs.resource.SmtpConfiguration {
   public static final String SMTP_CONFIGURATION_TABLE_NAME = "smtp_configuration";
@@ -31,7 +34,28 @@ public class SmtpConfigurationApi implements org.folio.rest.jaxrs.resource.SmtpC
 
     PgUtil.get(SMTP_CONFIGURATION_TABLE_NAME, SmtpConfiguration.class, SmtpConfigurations.class,
       query, offset, limit, okapiHeaders, vertxContext, GetSmtpConfigurationResponse.class)
+      .map(SmtpConfigurationApi::stripSensitiveFields)
       .onComplete(asyncResultHandler);
+  }
+
+  /**
+   * Removes the sensitive fields (same schema as the {@code smtp-configuration} setting, e.g. the
+   * password) from every configuration of a collection response. The item GET still returns them.
+   */
+  private static Response stripSensitiveFields(Response response) {
+    if (response.getEntity() instanceof SmtpConfigurations collection) {
+      var stripped = collection.getSmtpConfigurations().stream()
+        .map(SmtpConfigurationApi::stripSensitiveFields)
+        .toList();
+      collection.setSmtpConfigurations(stripped);
+    }
+    return response;
+  }
+
+  private static SmtpConfiguration stripSensitiveFields(SmtpConfiguration configuration) {
+    var json = JsonObject.mapFrom(configuration);
+    SensitiveFields.forKey(SMTP_CONFIG_KEY).forEach(json::remove);
+    return json.mapTo(SmtpConfiguration.class);
   }
 
   @Override

@@ -2,11 +2,13 @@
 
 ### New APIs versions
 * Provides `email v1.2`
+* Provides `email.settings v1.1`
 
 ### Features
 * Add `identities` (sender address + optional display name) to the SMTP configuration; a matching `from` address is rendered as `"Name" <addr>` ([MODEMAIL-127](https://folio-org.atlassian.net/browse/MODEMAIL-127))
 * Add optional `bcc` field to `POST /email`, resolved against SMTP `identities` like `from` ([MODEMAIL-129](https://folio-org.atlassian.net/browse/MODEMAIL-129))
 * Change `bcc` field to an array of email addresses ([MODEMAIL-131](https://folio-org.atlassian.net/browse/MODEMAIL-131))
+* Omit the SMTP password from `GET /email/settings` and `GET /smtp-configuration`; the item GETs still return it, and a PUT to `/email/settings/{id}` without the password keeps the stored one
 
 ## v1.20.0 2026-04-16
 

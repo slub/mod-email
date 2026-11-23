@@ -29,6 +29,7 @@ import org.folio.rest.jaxrs.resource.EmailSettings.GetEmailSettingsResponse;
 import org.folio.rest.jaxrs.resource.EmailSettings.PostEmailSettingsResponse;
 import org.folio.rest.persist.Conn;
 import org.folio.rest.persist.PgUtil;
+import org.folio.util.SensitiveFields;
 import org.folio.util.SmtpConfigurationValueVerifier;
 
 public abstract class AbstractMailSettings {
@@ -45,6 +46,9 @@ public abstract class AbstractMailSettings {
   /**
    * Finds settings by a CQL query.
    *
+   * <p>Sensitive fields of the setting values (see {@link SensitiveFields}), e.g. the SMTP password,
+   * are removed from the response. {@link #findSettingById} still returns them.</p>
+   *
    * @param query  the CQL query string (may be null or empty for default)
    * @param offset the result offset for paging
    * @param limit  the maximum number of results to return
@@ -53,7 +57,8 @@ public abstract class AbstractMailSettings {
   protected Future<Response> findSettingsByQuery(String query, int offset, int limit,
     Map<String, String> okapiHeaders, Context context) {
     return PgUtil.get(SETTINGS_TABLE, Setting.class, SettingCollection.class, query, offset, limit,
-      okapiHeaders, context, GetEmailSettingsResponse.class);
+      okapiHeaders, context, GetEmailSettingsResponse.class)
+      .map(AbstractMailSettings::stripSensitiveFields);
   }
 
   /**
@@ -152,9 +157,37 @@ public abstract class AbstractMailSettings {
       throw new EmailSettingsException(getEntityNotFoundErrorEntity(id), NOT_FOUND);
     }
 
+    keepStoredSensitiveFields(prevValue, newValue);
     MAIL_SETTINGS_VERIFIERS.get(newValue.getKey()).accept(newValue.getValue());
     removeIdFromValueIfPresent(newValue);
     return conn.update(SETTINGS_TABLE, newValue, id).map(updatedRs -> respond204());
+  }
+
+  private static Response stripSensitiveFields(Response response) {
+    if (response.getEntity() instanceof SettingCollection collection) {
+      collection.getSettings().forEach(setting -> SensitiveFields.strip(setting.getKey(), setting.getValue()));
+    }
+    return response;
+  }
+
+  /**
+   * Copies sensitive fields that the new value doesn't contain from the stored value, so that a client
+   * which loaded the setting via the collection GET (without them) and PUTs it back doesn't wipe them.
+   */
+  @SuppressWarnings("unchecked")
+  private static void keepStoredSensitiveFields(JsonObject prevValue, Setting newValue) {
+    if (!(newValue.getValue() instanceof Map<?, ?> rawNewSettingValue)
+      || !newValue.getKey().equals(prevValue.getString("key"))
+      || !(prevValue.getValue("value") instanceof JsonObject storedSettingValue)) {
+      return;
+    }
+
+    var newSettingValue = (Map<String, Object>) rawNewSettingValue;
+    for (String field : SensitiveFields.forKey(newValue.getKey())) {
+      if (newSettingValue.get(field) == null && storedSettingValue.getValue(field) != null) {
+        newSettingValue.put(field, storedSettingValue.getValue(field));
+      }
+    }
   }
 
   private Error getInvalidKeyErrorEntity() {

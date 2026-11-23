@@ -8,7 +8,6 @@
         "host": "localhost",
         "port": 502,
         "username": "username",
-        "password": "password",
         "ssl": true,
         "trustAll": false,
         "loginOption": "REQUIRED",

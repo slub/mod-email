@@ -638,9 +638,17 @@ public class SendingEmailTest extends AbstractAPITest {
       .extract()
       .response();
 
-    String configuration = new JsonObject(response.body().asString())
+    // the collection GET omits the password, the item GET returns the full value
+    String settingId = new JsonObject(response.body().asString())
       .getJsonArray("settings")
       .getJsonObject(0)
+      .getString("id");
+    String configuration = new JsonObject(get(REST_PATH_MAIL_SETTINGS + "/" + settingId)
+      .then()
+      .statusCode(HttpStatus.SC_OK)
+      .extract()
+      .body()
+      .asString())
       .getJsonObject("value")
       .encodePrettily();
     assertThat(configuration, matchesJson(buildWiserSmtpConfiguration(), List.of("metadata")));

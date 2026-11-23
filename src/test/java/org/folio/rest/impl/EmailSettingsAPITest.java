@@ -9,6 +9,7 @@ import static org.apache.http.HttpStatus.SC_UNPROCESSABLE_ENTITY;
 import static org.folio.matchers.JsonMatchers.matchesJson;
 import static org.folio.util.StubUtils.buildIncorrectWiserSmtpConfiguration;
 import static org.folio.util.StubUtils.buildSmtpConfiguration;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.startsWith;
 
@@ -162,7 +163,7 @@ public class EmailSettingsAPITest extends AbstractAPITest {
       .body(matchesJson(emailSetting, ignoredProperties()))
       .extract().body().asString();
 
-    var postResponseJson = new JsonObject(createdSettingJsonString);
+    var postResponseJson = withoutPassword(new JsonObject(createdSettingJsonString));
     var emailSettings = new JsonObject()
       .put("settings", List.of(postResponseJson))
       .put("totalRecords", 1);
@@ -203,7 +204,7 @@ public class EmailSettingsAPITest extends AbstractAPITest {
       .extract().body().asString();
 
     var settingsCollection = new JsonObject()
-      .put("settings", List.of(new JsonObject(createdSettingJsonString)))
+      .put("settings", List.of(withoutPassword(new JsonObject(createdSettingJsonString))))
       .put("totalRecords", 1);
 
     get(REST_PATH_MAIL_SETTINGS + "?query=scope==mod-email")
@@ -217,6 +218,66 @@ public class EmailSettingsAPITest extends AbstractAPITest {
       .statusCode(SC_OK)
       .contentType(ContentType.JSON)
       .body(matchesJson(settingsCollection));
+  }
+
+  @Test
+  public void getEmailSettings_positive_passwordIsOmitted() {
+    var emailSetting = buildValidEmailSettings();
+    post(REST_PATH_MAIL_SETTINGS, emailSetting.encodePrettily())
+      .then()
+      .statusCode(SC_CREATED);
+
+    var value = getSettingValueFromCollection();
+    assertThat(value.containsKey("password"), is(false));
+    var expectedValue = emailSetting.getJsonObject("value").copy();
+    expectedValue.remove("password");
+    assertThat(value.encode(), matchesJson(expectedValue));
+
+    get(emailSettingByIdPath(CONFIG_ID))
+      .then()
+      .statusCode(SC_OK)
+      .body("value.password", is(emailSetting.getJsonObject("value").getString("password")));
+  }
+
+  @Test
+  public void putById_positive_missingPasswordKeepsStoredOne() {
+    var emailSetting = buildValidEmailSettings();
+    var storedPassword = emailSetting.getJsonObject("value").getString("password");
+    post(REST_PATH_MAIL_SETTINGS, emailSetting.encodePrettily())
+      .then()
+      .statusCode(SC_CREATED);
+
+    // a client that edits the collection GET result sends no password
+    var settingToPut = withoutPassword(emailSetting.copy());
+    settingToPut.getJsonObject("value").put("from", "updated@folio.org");
+    put(emailSettingByIdPath(CONFIG_ID), settingToPut.encodePrettily())
+      .then()
+      .statusCode(SC_NO_CONTENT);
+
+    get(emailSettingByIdPath(CONFIG_ID))
+      .then()
+      .statusCode(SC_OK)
+      .body("value.password", is(storedPassword))
+      .body("value.from", is("updated@folio.org"));
+  }
+
+  @Test
+  public void putById_positive_newPasswordReplacesStoredOne() {
+    var emailSetting = buildValidEmailSettings();
+    post(REST_PATH_MAIL_SETTINGS, emailSetting.encodePrettily())
+      .then()
+      .statusCode(SC_CREATED);
+
+    var settingToPut = emailSetting.copy();
+    settingToPut.getJsonObject("value").put("password", "new-password");
+    put(emailSettingByIdPath(CONFIG_ID), settingToPut.encodePrettily())
+      .then()
+      .statusCode(SC_NO_CONTENT);
+
+    get(emailSettingByIdPath(CONFIG_ID))
+      .then()
+      .statusCode(SC_OK)
+      .body("value.password", is("new-password"));
   }
 
   @Test
@@ -370,6 +431,19 @@ public class EmailSettingsAPITest extends AbstractAPITest {
       .statusCode(SC_OK)
       .contentType(ContentType.JSON)
       .body(matchesJson(emailSetting, ignoredProperties()));
+  }
+
+  private JsonObject getSettingValueFromCollection() {
+    var body = get(REST_PATH_MAIL_SETTINGS + "?query=key==smtp-configuration")
+      .then()
+      .statusCode(SC_OK)
+      .extract().body().asString();
+    return new JsonObject(body).getJsonArray("settings").getJsonObject(0).getJsonObject("value");
+  }
+
+  private static JsonObject withoutPassword(JsonObject setting) {
+    setting.getJsonObject("value").remove("password");
+    return setting;
   }
 
   private static String emailSettingByIdPath(String id) {

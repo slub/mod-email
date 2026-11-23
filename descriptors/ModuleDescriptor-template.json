@@ -131,7 +131,7 @@
     },
     {
       "id": "email.settings",
-      "version": "1.0",
+      "version": "1.1",
       "handlers": [
         {
           "methods": ["GET"],
@@ -229,7 +229,7 @@
     {
       "permissionName" : "email.settings.collection.get",
       "displayName" : "mod-email - retrieve settings by cql",
-      "description" : "Get a collection of settings"
+      "description" : "Get a collection of settings; secret values such as the SMTP password are not included"
     },
     {
       "permissionName" : "email.settings.item.get",

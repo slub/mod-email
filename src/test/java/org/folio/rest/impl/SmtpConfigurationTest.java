@@ -54,6 +54,7 @@ public class SmtpConfigurationTest extends AbstractAPITest {
       .response();
 
     JsonObject postResponseJson = new JsonObject(postResponse.body().asString());
+    postResponseJson.remove("password");
     JsonObject smtpConfigurations = new JsonObject()
       .put("smtpConfigurations", List.of(postResponseJson))
       .put("totalRecords", 1);
