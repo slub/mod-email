@@ -29,7 +29,7 @@ import org.folio.rest.jaxrs.resource.EmailSettings.GetEmailSettingsResponse;
 import org.folio.rest.jaxrs.resource.EmailSettings.PostEmailSettingsResponse;
 import org.folio.rest.persist.Conn;
 import org.folio.rest.persist.PgUtil;
-import org.folio.util.SensitiveFields;
+import org.folio.util.CollectionOmittedFields;
 import org.folio.util.SmtpConfigurationValueVerifier;
 
 public abstract class AbstractMailSettings {
@@ -46,7 +46,8 @@ public abstract class AbstractMailSettings {
   /**
    * Finds settings by a CQL query.
    *
-   * <p>Sensitive fields of the setting values (see {@link SensitiveFields}), e.g. the SMTP password,
+   * <p>Fields of the setting values marked to be omitted from collections (see
+   * {@link CollectionOmittedFields}), e.g. the SMTP password,
    * are removed from the response. {@link #findSettingById} still returns them.</p>
    *
    * @param query  the CQL query string (may be null or empty for default)
@@ -58,7 +59,7 @@ public abstract class AbstractMailSettings {
     Map<String, String> okapiHeaders, Context context) {
     return PgUtil.get(SETTINGS_TABLE, Setting.class, SettingCollection.class, query, offset, limit,
       okapiHeaders, context, GetEmailSettingsResponse.class)
-      .map(AbstractMailSettings::stripSensitiveFields);
+      .map(AbstractMailSettings::stripCollectionOmittedFields);
   }
 
   /**
@@ -162,9 +163,9 @@ public abstract class AbstractMailSettings {
     return conn.update(SETTINGS_TABLE, newValue, id).map(updatedRs -> respond204());
   }
 
-  private static Response stripSensitiveFields(Response response) {
+  private static Response stripCollectionOmittedFields(Response response) {
     if (response.getEntity() instanceof SettingCollection collection) {
-      collection.getSettings().forEach(setting -> SensitiveFields.strip(setting.getKey(), setting.getValue()));
+      collection.getSettings().forEach(setting -> CollectionOmittedFields.strip(setting.getKey(), setting.getValue()));
     }
     return response;
   }

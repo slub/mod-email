@@ -55,7 +55,7 @@ public class SmtpConfigurationTest extends AbstractAPITest {
 
     JsonObject postResponseJson = new JsonObject(postResponse.body().asString());
     List.of("host", "port", "username", "password", "ssl", "trustAll", "loginOption",
-      "startTlsOptions", "expirationHours", "authMethods").forEach(postResponseJson::remove);
+      "startTlsOptions", "expirationHours", "authMethods", "idleTimeout", "connectTimeout").forEach(postResponseJson::remove);
     JsonObject smtpConfigurations = new JsonObject()
       .put("smtpConfigurations", List.of(postResponseJson))
       .put("totalRecords", 1);

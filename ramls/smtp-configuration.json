@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "description": "Configuration of the SMTP server. Properties marked with \"x-sensitive\": true (server connection settings and credentials) are omitted from collection GET responses",
+  "description": "Configuration of the SMTP server. Properties marked with \"x-omit-in-collection\": true (server connection settings and credentials) are omitted from collection GET responses",
   "title": "SMTP configuration schema",
   "type": "object",
   "properties": {
@@ -11,37 +11,37 @@
     "host": {
       "description": "SMTP server host",
       "type": "string",
-      "x-sensitive": true
+      "x-omit-in-collection": true
     },
     "port": {
       "description": "SMTP server port",
       "type": "integer",
-      "x-sensitive": true
+      "x-omit-in-collection": true
     },
     "username": {
       "description": "Username (credentials to access the SMTP server)",
       "type": "string",
-      "x-sensitive": true
+      "x-omit-in-collection": true
     },
     "password": {
       "description": "Password (credentials to access the SMTP server)",
       "type": "string",
-      "x-sensitive": true
+      "x-omit-in-collection": true
     },
     "ssl": {
       "description": "Connect to SMTP server using SSL",
       "type": "boolean",
-      "x-sensitive": true
+      "x-omit-in-collection": true
     },
     "trustAll": {
       "description": "Trust all certificates when establishing an SSL connection",
       "type": "boolean",
-      "x-sensitive": true
+      "x-omit-in-collection": true
     },
     "loginOption": {
       "description": "Login mode",
       "type": "string",
-      "x-sensitive": true,
+      "x-omit-in-collection": true,
       "enum": [
         "DISABLED",
         "NONE",
@@ -52,7 +52,7 @@
     "startTlsOptions": {
       "description": "Start TLS options",
       "type": "string",
-      "x-sensitive": true,
+      "x-omit-in-collection": true,
       "enum": [
         "DISABLED",
         "OPTIONAL",
@@ -62,12 +62,12 @@
     "expirationHours": {
       "description": "Email gets deleted after this time from DB",
       "type": "integer",
-      "x-sensitive": true
+      "x-omit-in-collection": true
     },
     "authMethods": {
       "description": "Authentication methods",
       "type": "string",
-      "x-sensitive": true
+      "x-omit-in-collection": true
     },
     "from": {
       "description": "Default sender address used when the email request has no 'from' field. Not matched against identities.",
@@ -120,11 +120,13 @@
     },
     "idleTimeout": {
       "description": "Idle timeout for SMTP connection in seconds",
-      "type": "integer"
+      "type": "integer",
+      "x-omit-in-collection": true
     },
     "connectTimeout": {
       "description": "Connect timeout for SMTP connection in seconds",
-      "type": "integer"
+      "type": "integer",
+      "x-omit-in-collection": true
     },
     "metadata": {
       "description": "Metadata about creation and changes to the SMTP configuration provided by the server",

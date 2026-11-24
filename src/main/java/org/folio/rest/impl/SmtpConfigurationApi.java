@@ -12,7 +12,7 @@ import org.apache.logging.log4j.Logger;
 import org.folio.rest.jaxrs.model.SmtpConfiguration;
 import org.folio.rest.jaxrs.model.SmtpConfigurations;
 import org.folio.rest.persist.PgUtil;
-import org.folio.util.SensitiveFields;
+import org.folio.util.CollectionOmittedFields;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Context;
@@ -34,27 +34,27 @@ public class SmtpConfigurationApi implements org.folio.rest.jaxrs.resource.SmtpC
 
     PgUtil.get(SMTP_CONFIGURATION_TABLE_NAME, SmtpConfiguration.class, SmtpConfigurations.class,
       query, offset, limit, okapiHeaders, vertxContext, GetSmtpConfigurationResponse.class)
-      .map(SmtpConfigurationApi::stripSensitiveFields)
+      .map(SmtpConfigurationApi::stripCollectionOmittedFields)
       .onComplete(asyncResultHandler);
   }
 
   /**
-   * Removes the sensitive fields (same schema as the {@code smtp-configuration} setting, e.g. the
+   * Removes the collection-omitted fields (same schema as the {@code smtp-configuration} setting, e.g. the
    * password) from every configuration of a collection response. The item GET still returns them.
    */
-  private static Response stripSensitiveFields(Response response) {
+  private static Response stripCollectionOmittedFields(Response response) {
     if (response.getEntity() instanceof SmtpConfigurations collection) {
       var stripped = collection.getSmtpConfigurations().stream()
-        .map(SmtpConfigurationApi::stripSensitiveFields)
+        .map(SmtpConfigurationApi::stripCollectionOmittedFields)
         .toList();
       collection.setSmtpConfigurations(stripped);
     }
     return response;
   }
 
-  private static SmtpConfiguration stripSensitiveFields(SmtpConfiguration configuration) {
+  private static SmtpConfiguration stripCollectionOmittedFields(SmtpConfiguration configuration) {
     var json = JsonObject.mapFrom(configuration);
-    SensitiveFields.forKey(SMTP_CONFIG_KEY).forEach(json::remove);
+    CollectionOmittedFields.forKey(SMTP_CONFIG_KEY).forEach(json::remove);
     return json.mapTo(SmtpConfiguration.class);
   }
 

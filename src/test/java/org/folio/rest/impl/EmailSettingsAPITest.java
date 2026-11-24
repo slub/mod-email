@@ -25,8 +25,9 @@ import org.junit.Test;
 public class EmailSettingsAPITest extends AbstractAPITest {
 
   private static final String CONFIG_ID = UUID.randomUUID().toString();
-  private static final List<String> SENSITIVE_FIELDS = List.of("host", "port", "username",
-    "password", "ssl", "trustAll", "loginOption", "startTlsOptions", "expirationHours", "authMethods");
+  private static final List<String> COLLECTION_OMITTED_FIELDS = List.of("host", "port", "username",
+    "password", "ssl", "trustAll", "loginOption", "startTlsOptions", "expirationHours", "authMethods",
+    "idleTimeout", "connectTimeout");
 
   @Test
   public void postEmailSettings_positive() {
@@ -165,7 +166,7 @@ public class EmailSettingsAPITest extends AbstractAPITest {
       .body(matchesJson(emailSetting, ignoredProperties()))
       .extract().body().asString();
 
-    var postResponseJson = withoutSensitiveFields(new JsonObject(createdSettingJsonString));
+    var postResponseJson = withoutCollectionOmittedFields(new JsonObject(createdSettingJsonString));
     var emailSettings = new JsonObject()
       .put("settings", List.of(postResponseJson))
       .put("totalRecords", 1);
@@ -206,7 +207,7 @@ public class EmailSettingsAPITest extends AbstractAPITest {
       .extract().body().asString();
 
     var settingsCollection = new JsonObject()
-      .put("settings", List.of(withoutSensitiveFields(new JsonObject(createdSettingJsonString))))
+      .put("settings", List.of(withoutCollectionOmittedFields(new JsonObject(createdSettingJsonString))))
       .put("totalRecords", 1);
 
     get(REST_PATH_MAIL_SETTINGS + "?query=scope==mod-email")
@@ -223,16 +224,17 @@ public class EmailSettingsAPITest extends AbstractAPITest {
   }
 
   @Test
-  public void getEmailSettings_positive_sensitiveFieldsAreOmitted() {
+  public void getEmailSettings_positive_markedFieldsAreOmitted() {
     var emailSetting = buildValidEmailSettings();
-    emailSetting.getJsonObject("value").put("expirationHours", 24);
+    emailSetting.getJsonObject("value").put("expirationHours", 24)
+      .put("idleTimeout", 25).put("connectTimeout", 25);
     post(REST_PATH_MAIL_SETTINGS, emailSetting.encodePrettily())
       .then()
       .statusCode(SC_CREATED);
 
     var value = getSettingValueFromCollection();
-    SENSITIVE_FIELDS.forEach(field -> assertThat(field, value.containsKey(field), is(false)));
-    var expectedValue = withoutSensitiveFields(emailSetting.copy()).getJsonObject("value");
+    COLLECTION_OMITTED_FIELDS.forEach(field -> assertThat(field, value.containsKey(field), is(false)));
+    var expectedValue = withoutCollectionOmittedFields(emailSetting.copy()).getJsonObject("value");
     assertThat(value.encode(), matchesJson(expectedValue));
 
     get(emailSettingByIdPath(CONFIG_ID))
@@ -402,9 +404,9 @@ public class EmailSettingsAPITest extends AbstractAPITest {
     return new JsonObject(body).getJsonArray("settings").getJsonObject(0).getJsonObject("value");
   }
 
-  private static JsonObject withoutSensitiveFields(JsonObject setting) {
+  private static JsonObject withoutCollectionOmittedFields(JsonObject setting) {
     var value = setting.getJsonObject("value");
-    SENSITIVE_FIELDS.forEach(value::remove);
+    COLLECTION_OMITTED_FIELDS.forEach(value::remove);
     return setting;
   }
 

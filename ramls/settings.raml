@@ -38,8 +38,8 @@ resourceTypes:
       schemaItem: setting
   get:
     description: >
-      Get a list of settings. Sensitive fields of the setting values (marked with
-      "x-sensitive" in the value schema, e.g. the SMTP server connection settings and
+      Get a list of settings. Fields of the setting values marked with
+      "x-omit-in-collection" in the value schema (e.g. the SMTP server connection settings and
       credentials) are not included; use GET /email/settings/{id} to read them.
     is: [
       searchable: { description: "CQL query", example: "key==EMAIL_SMTP_CONFIGURATION" },
